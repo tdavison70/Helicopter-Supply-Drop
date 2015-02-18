@@ -81,8 +81,8 @@ SDROPLoadLootSupplies = {
 	_crate addMagazineCargoGlobal ["ColdPack",2];
 	_crate addMagazineCargoGlobal ["Pelt_EPOCH",2];
 	_crate addWeaponCargoGlobal ["MultiGun",2];
-	_crate addItemCargoGlobal ["Heal_EPOCH",2];
-	_crate addItemCargoGlobal ["Repair_EPOCH",1];
+	_crate addMagazineCargoGlobal ["Heal_EPOCH",2];
+	_crate addMagazineCargoGlobal ["Repair_EPOCH",1];
 	_crate addMagazineCargoGlobal ["EnergyPack",4];
 	_crate addMagazineCargoGlobal ["EnergyPackLg",1];
 	_crate addBackpackCargoGlobal ["B_Carryall_oucamo",1];
