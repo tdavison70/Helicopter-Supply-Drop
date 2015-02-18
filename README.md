@@ -7,6 +7,7 @@ Current Version is v1.0
 <div style="padding: 4px; background: #efefef; border: 1px solid #666;">
 <ul>
   <li>Random landing zones for supply crates delivered by AI pilots</li>
+  <li>4 supply crate types are pre-defined: Food & Clothing / Supplies / Weapons & Ammo / Random Loot</li> 
   <li>Customizable crate loot (via editing init.sqf) also has random loot generator</li>
   <li>500-meter radius marker for LZ lets players know where to look</li>
   <li>Auto repeating mission once crate has been found</li>
