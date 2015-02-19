@@ -19,16 +19,16 @@ Current Version is v1.0
 Extract it to your Desktop or somewhere where you won't lose it. Inside the Zip is this Readme.MD, and the folder "SupplyDrop-1.0". Inside you will find SDROP.pbo and the "SDrop" folder with mission and script files.
 
 <strong>1. Edit your epoch.Altis initServer.sqf (or add one)</strong><br />
-Paste in the following line (or add to existing IF SERVER condition):<br />
-if (isServer) then {
-	[] ExecVM "\SDROP\init.sqf";
+Paste in the following line (or add to existing IF SERVER condition):<br /><br />
+if (isServer) then {<br />
+	[] ExecVM "\SDROP\init.sqf";<br />
 };
 
 <strong>2. Edit your epoch.Altis init.sqf (or add one)</strong><br />
-Paste in the following - this is used for sending messages to all players:<br />
-//Supply Drop Alert Event
-"SDROP_Alert" addPublicVariableEventHandler {
-	titleText[format["%1",_this select 1],"PLAIN DOWN",1];
+Paste in the following - this is used for sending messages to all players:<br /><br />
+//Supply Drop Alert Event<br />
+"SDROP_Alert" addPublicVariableEventHandler {<br />
+	titleText[format["%1",_this select 1],"PLAIN DOWN",1];<br />
 };
 
 <strong>3. Copy the SDROP.pbo to your @EpochHive/addons/ 
