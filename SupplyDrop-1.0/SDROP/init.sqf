@@ -217,7 +217,7 @@ SDROPRandomLoot = {
 };
 
 SDROPBroadcast = {
-	private ["title","subTitle"];
+	private ["_title","_subTitle"];
 	
 	_title = _this select 0;
 	_subTitle = _this select 1;
