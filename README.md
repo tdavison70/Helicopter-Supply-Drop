@@ -22,6 +22,7 @@ Current Version is v1.0a
 	<li>Added probability for supply drop to not happen (based on percentage you set: default 0)</li>
 	<li>Added probability for supply helicopter to crash before it drops supplies (based on percentage you set: default 0)</li>
 	<li>Added better message handling - notifications similar to SEM (using Hint with custom text)</li>
+</ul>
 
 <h2>Installation:</h2>
 Extract it to your Desktop or somewhere where you won't lose it. Inside the Zip is this Readme.MD, and the folder "SupplyDrop-1.0". Inside you will find SDROP.pbo and the "SDrop" folder with mission and script files.
