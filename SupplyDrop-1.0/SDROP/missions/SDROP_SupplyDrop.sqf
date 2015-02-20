@@ -1,8 +1,29 @@
 /*
 	Author: tDavison
-	Inspiration: blckeagls / A3AEI / VEMF / IgiLoad
+	Inspiration: blckeagls / A3EAI / VEMF / IgiLoad
 	License: Attribution-NonCommercial-ShareAlike 4.0 International
 */
+
+//Need to calculate if the supply drop was cancelled, based on variable SDROPSupplyDropFailChance set in init.sqf
+if (SDROPSupplyDropFailChance > 0) then {
+	
+	_failChance = (floor (random 100) + 1);
+	
+	if (_failChance <= SDROPSupplyDropFailChance) exitWith {
+		//we failed - restart timer
+		sleep SDROPMissionTimer;
+		[] execVM "\SDROP\missions\SDROP_SupplyDrop.sqf";
+	};
+};
+
+//default helicopter's probability of crashing
+_heliWillCrash = false;
+
+//Need to calculate if the helicopter will crash, based on variable SDROPHelicopterCrashChance set in init.sqf
+if (SDROPHelicopterCrashChance > 0) then {
+	_crashChance = (floor (random 100) + 1);
+	if (_crashChance <= SDROPHelicopterCrashChance) then {_heliWillCrash = true};
+};
 
 // north, south, east, west starting locations for supply helicopter
 // these distances are all oceanic spawns
@@ -10,7 +31,7 @@ _posArray = [[15971.3,25950.5,200],[14727.5,3934.5,200],[26869.5,15454.5,200],[1
 
 //how high up (meters) should parachute open (default: 150)
 //I'd recommend keeping minimum around 200 as heli flies in at that height
-_chuteMinDistanceToOpen = 160;
+_chuteMinDistanceToOpen = 150;
 
 //random supply helicopter spawn
 _heliSpawnPosition = _posArray call bis_fnc_selectrandom;  
@@ -49,7 +70,31 @@ _wpPosition = _coords;
 _supplyHeli move _wpPosition;
 
 //Announce a drop is inbound to all players
-["A supply helicopter has been spotted!"] execVM "\SDROP\scripts\SDROP_Alert.sqf";
+_title = "Supply Helicopter Inbound!";
+_subTitle = "A chopper carrying survivor equipment has been spotted.";
+[_title,_subTitle] call SDROPBroadcast;
+
+//if we're crashing, we need to destroy the crew and helicopter, and restart mission params
+if (_heliWillCrash) exitWith {
+
+	//let's let the helicopter get close-ish to drop zone
+	waitUntil {_supplyHeli distance _wpPosition < 2000 };
+	
+	//kill the crew - will result in crash
+	{_x setDamage 1;} forEach crew _supplyHeli;
+	
+	//damage the helicopter - will be destroyed on impact
+	_supplyHeli setDamage 0.9;
+	
+	//Announce the heli got destroyed - optional, comment out below if you don't want to notify players
+	_title = "Supply Helicopter Crashed!";
+	_subTitle = "Looks like you'll have to wait a while for those supplies.";
+	[_title,_subTitle] call SDROPBroadcast;
+	
+	//let's recall mission
+	sleep SDROPMissionTimer;
+	[] execVM "\SDROP\missions\SDROP_SupplyDrop.sqf";
+};
 
 //Waits until heli gets near the position to drop crate
 waitUntil {_supplyHeli distance _wpPosition < 400 };
@@ -107,41 +152,42 @@ detach _crate;
 //see if crate is in the drink
 _crateIsInWater = surfaceIsWater position _crate;
 
-if (!_crateIsInWater) then {
+if (_crateIsInWater) exitWith {
 	
-	//create marker at supply crate's landing zone (NOTE: only an approximation of where crate will be, and crate could be slightly outside the LZ)
-	_marker = createMarker ["SupplyDropMarker", _wpPosition ];
-	_marker setMarkerSize [500,500];
-	_marker setMarkerBrush "Horizontal";
-	_marker setMarkerShape "ELLIPSE";
-	_marker setMarkerColor "ColorCIV";
-	
-	//If you decide to use the marker below, comment out marker above
-	//This marker spawns on the crate - giving away the crate's exact position
-	//_marker = createMarker ["SupplyDropMarker", getPos _crate ];
-	//_marker setMarkerType "mil_objective";
-	//_marker setMarkerColor "ColorYellow";
-
-	//pop smoke shell at crate
-	_smoke = createVehicle ["SmokeShellPurple", [position _crate select 0, (position _crate select 1) + 1, position _crate select 2], [], 0, "NONE"];
-
-	//Waits until player gets near the _crate to end mission unless crate in water, then continue as it can't be looted anyway
-	//announce to players the eagle has landed
-	["A supply crate has been delivered! Check your map for the location!"] execVM "\SDROP\scripts\SDROP_Alert.sqf";
-	waitUntil{{isPlayer _x && _x distance _crate < 10  } count playableunits > 0};
-	
-	//delete marker
-	deleteMarker "SupplyDropMarker";
-	
-	//Re-Start supply drop mission
-	sleep SDROPMissionTimer;
-	[] execVM "\SDROP\missions\SDROP_SupplyDrop.sqf";
-	
-} else {
-	
-	//since crate was dropped in water, re-start mission, do some cleanup
+	//crate was dropped in water, re-start mission, do some cleanup
 	deleteVehicle _crate;
 	
 	sleep SDROPMissionTimer;
 	[] execVM "\SDROP\missions\SDROP_SupplyDrop.sqf";
 };
+
+//create marker at supply crate's landing zone (NOTE: only an approximation of where crate will be, and crate could be slightly outside the LZ)
+_marker = createMarker ["SupplyDropMarker", _wpPosition ];
+_marker setMarkerSize [500,500];
+_marker setMarkerBrush "Horizontal";
+_marker setMarkerShape "ELLIPSE";
+_marker setMarkerColor "ColorCIV";
+
+//If you decide to use the marker below, comment out marker above
+//This marker spawns on the crate - giving away the crate's exact position
+//_marker = createMarker ["SupplyDropMarker", getPos _crate ];
+//_marker setMarkerType "mil_objective";
+//_marker setMarkerColor "ColorYellow";
+
+//pop smoke shell at crate
+_smoke = createVehicle ["SmokeShellPurple", [position _crate select 0, (position _crate select 1) + 1, position _crate select 2], [], 0, "NONE"];
+
+//announce to players the eagle has landed
+_title = "Supply Crate Delivered!";
+_subTitle = "Check your map for the drop zone, and go get those supplies!";
+[_title,_subTitle] call SDROPBroadcast;
+
+//Waits until player gets near the _crate to end mission
+waitUntil{{isPlayer _x && _x distance _crate < 10  } count playableunits > 0};
+
+//delete marker
+deleteMarker "SupplyDropMarker";
+
+//Re-Start supply drop mission
+sleep SDROPMissionTimer;
+[] execVM "\SDROP\missions\SDROP_SupplyDrop.sqf";

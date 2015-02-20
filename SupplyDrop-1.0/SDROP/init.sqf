@@ -1,6 +1,6 @@
 /*
 	Author: tDavison
-	Inspiration: blckeagls / A3AEI / VEMF / IgiLoad
+	Inspiration: blckeagls / A3EAI / VEMF / IgiLoad
 	License: Attribution-NonCommercial-ShareAlike 4.0 International
 */
 
@@ -12,6 +12,14 @@ SDROPMissionTimer = 600;
 
 //declare log entry for mission framework
 diag_log text format ["[SDROP]: Starting Supply Drop Mission Framework"];
+
+//Change probability of supply drop - enter percentage as whole number from 1-100 (default 0)
+//example: if you change it to 30, then there is a 30% chance the supply drop won't get called - it will attempt it again based on timer above
+SDROPSupplyDropFailChance = 0;
+
+//Change probability of helicopter crashing - enter percentage as whole number from 1-100 (default 0)
+//example: if you enter 50, then there is a 50% chance the helicopter will crash on its way to LZ
+SDROPHelicopterCrashChance = 0;
 
 //Defines LOOT types and gets added to the drop crate
 SDROPLoadLootFood = {
@@ -206,6 +214,18 @@ SDROPRandomLoot = {
 	if ((count _report) > 0) then {
 		diag_log text format ["[SDROP]: LoadLoot: <Unknown> %1", str _report];
 	};
+};
+
+SDROPBroadcast = {
+	private ["title","subTitle"];
+	
+	_title = _this select 0;
+	_subTitle = _this select 1;
+	
+	_alertMsg = "<t color='#FFCC00' size='1.0' font='PuristaSemibold' shadow='1' shadowColor='#000000' align='center'>" + _title + "</t>";
+	_alertMsg = _alertMsg + "<br /><t color='#FFFFFF' size='0.9' font='PuristaLight' shadow='0' align='center'>" + _subTitle + "</t>";
+	
+	[_alertMsg] execVM "\SDROP\scripts\SDROP_Alert.sqf";
 };
 
 
