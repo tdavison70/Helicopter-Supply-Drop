@@ -1,7 +1,8 @@
 <h1>Helicopter Supply Drop Epoch Mission Framework</h1>
 <h3>Programmed for Arma 3 Epoch.</h3>
 
-Current Version is v1.0
+Current Version is v1.0a
+(see https://github.com/tdavison70/Helicopter-Supply-Drop/releases for previous releases)
 
 <h2>Features</h2>
 <div style="padding: 4px; background: #efefef; border: 1px solid #666;">
@@ -14,6 +15,13 @@ Current Version is v1.0
   <li>Virtually no BE filters - uses mostly vanilla loot (but you might need to add a few)</li>
 </ul>
 </div>
+
+<h2>Change History</h2>
+<strong>v1.0a</strong>
+<ul>
+	<li>Added probability for supply drop to not happen (based on percentage you set: default 0)</li>
+	<li>Added probability for supply helicopter to crash before it drops supplies (based on percentage you set: default 0)</li>
+	<li>Added better message handling - notifications similar to SEM (using Hint with custom text)</li>
 
 <h2>Installation:</h2>
 Extract it to your Desktop or somewhere where you won't lose it. Inside the Zip is this Readme.MD, and the folder "SupplyDrop-1.0". Inside you will find SDROP.pbo and the "SDrop" folder with mission and script files.
@@ -28,7 +36,7 @@ if (isServer) then {<br />
 Paste in the following - this is used for sending messages to all players:<br /><br />
 //Supply Drop Alert Event<br />
 "SDROP_Alert" addPublicVariableEventHandler {<br />
-	titleText[format["%1",_this select 1],"PLAIN DOWN",1];<br />
+	hint parseText format["%1", _this select 1];<br />
 };
 
 <strong>3. Copy the SDROP.pbo to your @EpochHive/addons/ 
