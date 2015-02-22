@@ -6,12 +6,19 @@
 
 if (!isServer) exitWith {};
 
-//mission timer - how often should supply drops happen (default: 600)
+//mission timer - how often should supply drops happen (default: 900, which is 15 minutes real-time)
 //NOTE: This won't get triggered unless crate is unreachable or someone finds crate
-SDROPMissionTimer = 600;
+SDROPMissionTimer = 900;
 
 //declare log entry for mission framework
 diag_log text format ["[SDROP]: Starting Supply Drop Mission Framework"];
+
+//This is the timeout for the crate being dropped from helicopter (default is 300, which is 5 minutes real-time)
+//If we reach this, the helicopter will drop the crate and return to its starting point
+SDROPSupplyDropTimeOut = 300;
+
+//This is the crate timeout - it will disappear after this time ONLY if it has not been found (default is 3600 which is 1-hour real-time)
+SDROPCrateTimeout = 3600;
 
 //Change probability of supply drop - enter percentage as whole number from 1-100 (default 0)
 //example: if you change it to 30, then there is a 30% chance the supply drop won't get called - it will attempt it again based on timer above

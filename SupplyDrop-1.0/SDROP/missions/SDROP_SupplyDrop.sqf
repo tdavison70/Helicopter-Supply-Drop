@@ -29,17 +29,13 @@ if (SDROPHelicopterCrashChance > 0) then {
 // these distances are all oceanic spawns
 _posArray = [[15971.3,25950.5,200],[14727.5,3934.5,200],[26869.5,15454.5,200],[1306.16,14832.8,200]];
 
-//how high up (meters) should parachute open (default: 150)
-//I'd recommend keeping minimum around 200 as heli flies in at that height
-_chuteMinDistanceToOpen = 150;
-
 //random supply helicopter spawn
 _heliSpawnPosition = _posArray call bis_fnc_selectrandom;  
 
 //these variables determine a safe location for the supply crate drops
 //map center is based on ALTIS with halved values
 _mapCenter = [7720,7671,0];
-_coords = [_mapCenter,500,14000,30,0,10,0] call BIS_fnc_findSafePos;
+_coords = [_mapCenter,500,10000,30,0,30,0] call BIS_fnc_findSafePos;
 
 //create helicopter and spawn it
 _supplyHeli = createVehicle ["I_Heli_Transport_02_F", _heliSpawnPosition, [], 90, "FLY"];
@@ -69,6 +65,9 @@ _wpPosition = _coords;
 //tell heli to move to position to drop crate
 _supplyHeli move _wpPosition;
 
+//let's get timer to set a timeout for the drop
+_supplyDropStartTime = diag_tickTime;
+
 //Announce a drop is inbound to all players
 _title = "Supply Helicopter Inbound!";
 _subTitle = "A chopper carrying survivor equipment has been spotted.";
@@ -78,7 +77,7 @@ _subTitle = "A chopper carrying survivor equipment has been spotted.";
 if (_heliWillCrash) exitWith {
 
 	//let's let the helicopter get close-ish to drop zone
-	waitUntil {_supplyHeli distance _wpPosition < 2000 };
+	waitUntil {_supplyHeli distance _wpPosition < 800 };
 	
 	//kill the crew - will result in crash
 	{_x setDamage 1;} forEach crew _supplyHeli;
@@ -96,21 +95,14 @@ if (_heliWillCrash) exitWith {
 	[] execVM "\SDROP\missions\SDROP_SupplyDrop.sqf";
 };
 
-//Waits until heli gets near the position to drop crate
-waitUntil {_supplyHeli distance _wpPosition < 400 };
+//Waits until heli gets near the position to drop crate, or if mission timer has been triggered
+waitUntil {_supplyHeli distance _wpPosition < 400 || (diag_tickTime - _supplyDropStartTime) > SDROPSupplyDropTimeOut};
 
 //create the parachute and crate
 _crate = createVehicle ["IG_supplyCrate_F", [0,0,0], [], 0, "CAN_COLLIDE"];
 _crate setPos [position _supplyHeli select 0, position _supplyHeli select 1, (position _supplyHeli select 2) - 10];
 
-//open parachute when crate reaches minimum distance to open
-//this helps prevent too much drift when falling
-//however crate can still fall outside the LZ
-while {(getPosATL _crate) select 2 > _chuteMinDistanceToOpen} do
-{
-	sleep 0.2;
-};
-
+//open parachute and attach to crate
 _chute = createVehicle ["I_Parachute_02_F", position _crate, [], 0, "CAN_COLLIDE"];
 _chute call EPOCH_server_vehicleInit;
 _chute call EPOCH_server_setVToken;
@@ -147,7 +139,9 @@ _supplyHeli move _heliSpawnPosition;
 //detach chute when crate is near the ground
 waitUntil {getPosATL _crate select 2 < 1 || isNull _chute};
 detach _crate;
-//_crate setPos [position _crate select 0, position _crate select 1, 0];
+
+//delete the chute for clean-up purposes
+deleteVehicle _chute;
 
 //see if crate is in the drink
 _crateIsInWater = surfaceIsWater position _crate;
@@ -161,8 +155,11 @@ if (_crateIsInWater) exitWith {
 	[] execVM "\SDROP\missions\SDROP_SupplyDrop.sqf";
 };
 
+//we don't want to give away crates exact position, so we'll generate an offset in meters (default 200)
+_markerOffset = [(position _crate select 0) + floor (random 200), (position _crate select 1) + floor (random 200), position _crate select 2];
+
 //create marker at supply crate's landing zone (NOTE: only an approximation of where crate will be, and crate could be slightly outside the LZ)
-_marker = createMarker ["SupplyDropMarker", _wpPosition ];
+_marker = createMarker ["SupplyDropMarker", _markerOffset];
 _marker setMarkerSize [500,500];
 _marker setMarkerBrush "Horizontal";
 _marker setMarkerShape "ELLIPSE";
@@ -174,8 +171,12 @@ _marker setMarkerColor "ColorCIV";
 //_marker setMarkerType "mil_objective";
 //_marker setMarkerColor "ColorYellow";
 
-//pop smoke shell at crate
+//pop smoke shell and chemLight yellow at crate
 _smoke = createVehicle ["SmokeShellPurple", [position _crate select 0, (position _crate select 1) + 1, position _crate select 2], [], 0, "NONE"];
+_chemLight = createVehicle ["Chemlight_yellow", [position _crate select 0, (position _crate select 1) + 2, position _crate select 2], [], 0, "NONE"];
+
+//get time the crate landed so we can time it
+_crateDropStartTime = diag_tickTime;
 
 //announce to players the eagle has landed
 _title = "Supply Crate Delivered!";
@@ -183,10 +184,17 @@ _subTitle = "Check your map for the drop zone, and go get those supplies!";
 [_title,_subTitle] call SDROPBroadcast;
 
 //Waits until player gets near the _crate to end mission
-waitUntil{{isPlayer _x && _x distance _crate < 10  } count playableunits > 0};
+waitUntil{(diag_tickTime - _crateDropStartTime) > SDROPCrateTimeout || {isPlayer _x && _x distance _crate < 10} count playableUnits > 0};
 
-//delete marker
+//delete marker, smoke and chemLight
 deleteMarker "SupplyDropMarker";
+deleteVehicle _smoke;
+deleteVehicle _chemLight;
+
+//clean-up the crate after time-out has been reached, and no player found the crate
+if ((diag_tickTime - _crateDropStartTime) > SDROPCrateTimeout) then {
+	deleteVehicle _crate;
+};
 
 //Re-Start supply drop mission
 sleep SDROPMissionTimer;
