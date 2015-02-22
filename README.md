@@ -17,6 +17,16 @@
 </div>
 
 <h2>Change History</h2>
+<strong>v1.0b (current release)</strong>
+<ul>
+	<li>Added timer for helicopter to get to spawn (this should prevent issues with hovering heli's when a safe position 	cannot be found)</li>
+	<li>Added timer for crate (it will de-spawn after one hour if no player gets with 10 meters of crate)
+	Added chemLight next to crate to aid in its location at night</li>
+	<li>Various performance issue fixes</li>
+	<li>Changed how marker is spawned. It will now spawn after crate has landed - and will randomize the center from the 	crate (thus not making it obvious where crate is located). This fixed the crate drifting outside the LZ.</li>
+	<li>Cleaned up parachute on landing; Cleaned up smoke grenade and chemLight after player gets within range.</li>
+</ul>
+
 <strong>v1.0a</strong>
 <ul>
 	<li>Added probability for supply drop to not happen (based on percentage you set: default 0)</li>
