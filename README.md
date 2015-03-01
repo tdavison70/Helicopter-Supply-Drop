@@ -17,7 +17,7 @@
 </div>
 
 <h2>Change History</h2>
-<strong>v1.0b (current release) Hotfix</strong>
+<strong>v1.0b Hotfix (current release)</strong>
 <ul>
 	<li>Moved all functions to separate file and compile on init</li>
 	<li>Replaced sleep command with uiSleep for performance issues</li>
