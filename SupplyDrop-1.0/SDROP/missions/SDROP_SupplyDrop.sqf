@@ -4,14 +4,14 @@
 	License: Attribution-NonCommercial-ShareAlike 4.0 International
 */
 
-//Need to calculate if the supply drop was cancelled, based on variable SDROPSupplyDropFailChance set in init.sqf
-if (SDROPSupplyDropFailChance > 0) then {
+//Need to calculate if the supply drop was cancelled, based on variable SDROP_SupplyDropFailChance set in init.sqf
+if (SDROP_SupplyDropFailChance > 0) then {
 	
 	_failChance = (floor (random 100) + 1);
 	
-	if (_failChance <= SDROPSupplyDropFailChance) exitWith {
-		//we failed - restart timer
-		sleep SDROPMissionTimer;
+	if (_failChance <= SDROP_SupplyDropFailChance) exitWith {
+		//failed to drop crate - restart timer
+		uiSleep SDROP_MissionTimer;
 		[] execVM "\SDROP\missions\SDROP_SupplyDrop.sqf";
 	};
 };
@@ -19,13 +19,13 @@ if (SDROPSupplyDropFailChance > 0) then {
 //default helicopter's probability of crashing
 _heliWillCrash = false;
 
-//Need to calculate if the helicopter will crash, based on variable SDROPHelicopterCrashChance set in init.sqf
-if (SDROPHelicopterCrashChance > 0) then {
+//Need to calculate if the helicopter will crash, based on variable SDROP_HelicopterCrashChance set in init.sqf
+if (SDROP_HelicopterCrashChance > 0) then {
 	_crashChance = (floor (random 100) + 1);
-	if (_crashChance <= SDROPHelicopterCrashChance) then {_heliWillCrash = true};
+	if (_crashChance <= SDROP_HelicopterCrashChance) then {_heliWillCrash = true};
 };
 
-// north, south, east, west starting locations for supply helicopter
+// ALTIS - north, south, east, west starting locations for supply helicopter
 // these distances are all oceanic spawns
 _posArray = [[15971.3,25950.5,200],[14727.5,3934.5,200],[26869.5,15454.5,200],[1306.16,14832.8,200]];
 
@@ -54,19 +54,15 @@ createVehicleCrew (_supplyHeli);
 //set waypoint for heli - this is where it goes
 _wpPosition = _coords;
 
-/* FOR TESTING ONLY - shows approx 600m radius where crate will get dropped */
-//_markerTmp = createMarker ["tempMarker", _wpPosition ];
-//_markerTmp setMarkerSize [600,600];
-//_markerTmp setMarkerBrush "DiagGrid";
-//_markerTmp setMarkerShape "ELLIPSE";
-//_markerTmp setMarkerColor "ColorYellow";
-/* END TEST */
-
 //tell heli to move to position to drop crate
 _supplyHeli move _wpPosition;
 
 //let's get timer to set a timeout for the drop
 _supplyDropStartTime = diag_tickTime;
+
+if (SDROP_Debug) then {
+	diag_log text format ["[SDROP]: Helicopter spawned, and moving to WP"];
+};
 
 //Announce a drop is inbound to all players
 _title = "Supply Helicopter Inbound!";
@@ -91,12 +87,12 @@ if (_heliWillCrash) exitWith {
 	[_title,_subTitle] call SDROPBroadcast;
 	
 	//let's recall mission
-	sleep SDROPMissionTimer;
+	uiSleep SDROP_MissionTimer;
 	[] execVM "\SDROP\missions\SDROP_SupplyDrop.sqf";
 };
 
-//Waits until heli gets near the position to drop crate, or if mission timer has been triggered
-waitUntil {_supplyHeli distance _wpPosition < 400 || (diag_tickTime - _supplyDropStartTime) > SDROPSupplyDropTimeOut};
+//Waits until heli gets near the position to drop crate, or if waypoint timeout has been triggered
+waitUntil {_supplyHeli distance _wpPosition < 400 || (diag_tickTime - _supplyDropStartTime) > 300};
 
 //create the parachute and crate
 _crate = createVehicle ["IG_supplyCrate_F", [0,0,0], [], 0, "CAN_COLLIDE"];
@@ -151,7 +147,11 @@ if (_crateIsInWater) exitWith {
 	//crate was dropped in water, re-start mission, do some cleanup
 	deleteVehicle _crate;
 	
-	sleep SDROPMissionTimer;
+	if (SDROP_Debug) then {
+		diag_log text format ["[SDROP]: Crate dropped in water - restarting."];
+	};
+	
+	uiSleep SDROP_MissionTimer;
 	[] execVM "\SDROP\missions\SDROP_SupplyDrop.sqf";
 };
 
@@ -178,13 +178,17 @@ _chemLight = createVehicle ["Chemlight_yellow", [position _crate select 0, (posi
 //get time the crate landed so we can time it
 _crateDropStartTime = diag_tickTime;
 
+if (SDROP_Debug) then {
+	diag_log text format ["[SDROP]: Crate landed. Starting Crate de-spawn timer"];
+};
+
 //announce to players the eagle has landed
 _title = "Supply Crate Delivered!";
 _subTitle = "Check your map for the drop zone, and go get those supplies!";
 [_title,_subTitle] call SDROPBroadcast;
 
-//Waits until player gets near the _crate to end mission
-waitUntil{(diag_tickTime - _crateDropStartTime) > SDROPCrateTimeout || {isPlayer _x && _x distance _crate < 10} count playableUnits > 0};
+//Waits until player gets near the _crate to end mission OR timeout occurred
+waitUntil{(diag_tickTime - _crateDropStartTime) > SDROP_CrateTimeout || {isPlayer _x && _x distance _crate < 10} count playableUnits > 0};
 
 //delete marker, smoke and chemLight
 deleteMarker "SupplyDropMarker";
@@ -192,10 +196,21 @@ deleteVehicle _smoke;
 deleteVehicle _chemLight;
 
 //clean-up the crate after time-out has been reached, and no player found the crate
-if ((diag_tickTime - _crateDropStartTime) > SDROPCrateTimeout) then {
+if ((diag_tickTime - _crateDropStartTime) > SDROP_CrateTimeout) exitWith {
+	
 	deleteVehicle _crate;
+	
+	if (SDROP_Debug) then {
+		diag_log text format ["[SDROP]: No players found the crate. Deleted crate"];
+	};
+	
+	//Re-Start supply drop mission
+	uiSleep SDROP_MissionTimer;
+	[] execVM "\SDROP\missions\SDROP_SupplyDrop.sqf";
+	
 };
 
-//Re-Start supply drop mission
-sleep SDROPMissionTimer;
-[] execVM "\SDROP\missions\SDROP_SupplyDrop.sqf";
+//player got within 10m of crate, so lets clean it up after a short delay
+if (!isNull _crate) then {
+	[_crate] execVM "\SDROP\scripts\SDROP_Crate_CleanUp.sqf";
+}
