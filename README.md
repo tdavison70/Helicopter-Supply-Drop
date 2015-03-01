@@ -17,7 +17,15 @@
 </div>
 
 <h2>Change History</h2>
-<strong>v1.0b (current release)</strong>
+<strong>v1.0b (current release) Hotfix</strong>
+<ul>
+	<li>Moved all functions to separate file and compile on init</li>
+	<li>Replaced sleep command with uiSleep for performance issues</li>
+	<li>Crates get cleaned up whether they are found or not</li>
+	<li>Better handling for timers</li>
+</ul>
+
+<strong>v1.0b</strong>
 <ul>
 	<li>Added timer for helicopter to get to spawn (this should prevent issues with hovering heli's when a safe position 	cannot be found)</li>
 	<li>Added timer for crate (it will de-spawn after one hour if no player gets with 10 meters of crate)
