@@ -17,7 +17,25 @@
 </div>
 
 <h2>Change History</h2>
-<strong>v1.0b Hotfix (current release)</strong>
+<strong>v1.0c Supply Drop with Paratrooper AI (current release)</strong>
+<ul>
+	<li>Added AI units that parachute down with crate and guard it</li>
+	<li>AI units each have a sub-set of skills - these guys are tough by default</li>
+	<li>AI might drop krypto</li>
+	<li>BIS_fnc_findSafePos now called from helicopter spawn position and uses world safe anchor for range</li>
+	<li>Added JIP (Join In Progress) support to eliminate multiple copies running on server</li>
+	<li>Replaced all <i>WaitUntil</i> loops with <i>While (sleep)</i> loops to fix major lag</li>
+	<li>Loitering helicopters should now be fixed (they get deleted)</li>
+</ul>
+
+<strong>Known issues (if you consider them as such):</strong>
+<ul>
+	<li>Crate can be destroyed by certain terrain (rocks)</li>
+	<li>AI units sometimes die on drops when they hit the ground (most often by rocks)</li>
+	<li>AI are extremely tough to beat solo (can be edited in SDROP_Functions.sqf)</li>
+</ul>
+
+<strong>v1.0b Hotfix</strong>
 <ul>
 	<li>Moved all functions to separate file and compile on init</li>
 	<li>Replaced sleep command with uiSleep for performance issues</li>
