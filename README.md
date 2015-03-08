@@ -1,7 +1,7 @@
 <h1>Helicopter Supply Drop Epoch Mission Framework</h1>
 <h3>Programmed for Arma 3 Epoch.</h3>
 
-<strong>Current Version is v1.0b</strong><br />
+<strong>Current Version is v1.0c</strong><br />
 (see https://github.com/tdavison70/Helicopter-Supply-Drop/releases for previous releases)
 
 <h2>Features</h2>
