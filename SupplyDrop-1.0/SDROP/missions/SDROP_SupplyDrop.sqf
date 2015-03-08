@@ -33,9 +33,10 @@ _posArray = [[15971.3,25950.5,200],[14727.5,3934.5,200],[26869.5,15454.5,200],[1
 _heliSpawnPosition = _posArray call bis_fnc_selectrandom;  
 
 //these variables determine a safe location for the supply crate drops
-//map center is based on ALTIS with halved values
-_mapCenter = [7720,7671,0];
-_coords = [_mapCenter,500,10000,30,0,30,0] call BIS_fnc_findSafePos;
+//using the helicopter spawn as starting point
+_coords = [_heliSpawnPosition,0,-1,30,0,30,0] call BIS_fnc_findSafePos;
+
+uiSleep 5;
 
 //create helicopter and spawn it
 _supplyHeli = createVehicle ["I_Heli_Transport_02_F", _heliSpawnPosition, [], 90, "FLY"];
@@ -43,19 +44,95 @@ _supplyHeli flyInHeight 200;
 _supplyHeli setVehicleLock "LOCKED";
 clearWeaponCargoGlobal _supplyHeli;
 clearMagazineCargoGlobal _supplyHeli;
+clearItemCargoGlobal _supplyHeli;
 
 //keep heli around until we delete it
 _supplyHeli call EPOCH_server_vehicleInit;
 _supplyHeli call EPOCH_server_setVToken;
 
-//add crew to supply helicopter
-createVehicleCrew (_supplyHeli);
+//add pilot (single group) to supply helicopter
+//createVehicleCrew (_supplyHeli);
+_grpPilot = createGroup RESISTANCE;
+_grpPilot setBehaviour "COMBAT";
+_grpPilot setCombatMode "RED";
+_unitPilot = _grpPilot createUnit ["I_helipilot_F", getPos _supplyHeli, [], 0, "FORM"];
+_unitPilot setSkill 1;
+_unitPilot moveInDriver _supplyHeli;
 
-//set waypoint for heli - this is where it goes
-_wpPosition = _coords;
+//Add paratrooper group to supplyHeli
+_grp = objNull;
 
-//tell heli to move to position to drop crate
-_supplyHeli move _wpPosition;
+if (SDROP_CreateParatrooperAI) then {
+	_grpCount = 3;							//default: 3 - this is our minimum number of paratroopers
+	_grpReinforce = floor(random 3)+1;		//number of additional paratroopers 1-3
+	_grpCount = _grpCount + _grpReinforce;
+	
+	_grp = createGroup RESISTANCE;
+	_grp setBehaviour "COMBAT";
+	_grp setCombatMode "RED";
+	
+	_sniperExists = false;
+	_isSniper = false;
+
+	for "_i" from 1 to (_grpCount) do
+	{
+		// Create Unit(s)
+		_unit = _grp createUnit ["I_Soldier_EPOCH", getPos _supplyHeli, [], 0, "FORM"];
+
+		_unit assignAsCargoIndex [_supplyHeli, 1];
+		_unit moveInCargo _supplyHeli;
+		
+		//chance for one unit to be sniper
+		if (!_sniperExists) then {
+			if (floor(random 100) < 10) then {
+				_isSniper = true;
+				_sniperExists = true;
+				_unit setBehaviour "STEALTH";
+			};
+		};
+		
+		// Load the AI Gear
+		[_unit,_isSniper] call SDROPLoadAIGear;
+		
+		//IMPORTANT: reset sniper so all units aren't snipers
+		_isSniper = false;
+		
+		//set skill ranks
+		_skillSetArray = [skillsRookie,skillsVeteran,skillsElite];
+		
+		//apply skills to units - leader will always be elite
+		if (count units _grp == _grpCount) then {
+			_grp selectLeader _unit;
+			[_unit,skillsElite] call SDROPSetUnitSkills;
+		} else {
+			[_unit,_skillSetArray call bis_fnc_selectrandom] call SDROPSetUnitSkills;
+		};
+
+		_unit setRank "Private";
+		_unit enableAI "TARGET";
+		_unit enableAI "AUTOTARGET";
+		_unit enableAI "MOVE";
+		_unit enableAI "ANIM";
+		_unit enableAI "FSM";
+
+		_unit addEventHandler ["Killed",{ [(_this select 0), (_this select 1)] execVM "\SDROP\scripts\SDROP_AI_Killed.sqf"; }];
+		_unit setVariable ["LASTLOGOUT_EPOCH", (diag_tickTime + 14400)];
+		
+	};
+};
+
+//set waypoint for helicopter
+_wpPosition =_grpPilot addWaypoint [_coords, 0];
+_wpPosition setWaypointType "MOVE";
+_wpPosition setWaypointSpeed "FULL";
+_wpPosition setWaypointBehaviour "COMBAT";
+
+
+if (SDROP_Debug) then {
+	_grpNull = isNull _grp;
+	_myUnitCount = count units _grp;
+	diag_log text format ["[SDROP]: Paratrooper group null? %1, Number of units in group = %2", _grpNull, _myUnitCount];
+};
 
 //let's get timer to set a timeout for the drop
 _supplyDropStartTime = diag_tickTime;
@@ -73,18 +150,33 @@ _subTitle = "A chopper carrying survivor equipment has been spotted.";
 if (_heliWillCrash) exitWith {
 
 	//let's let the helicopter get close-ish to drop zone
-	waitUntil {_supplyHeli distance _wpPosition < 800 };
+	_crashDestinationDone = false;
 	
-	//kill the crew - will result in crash
-	{_x setDamage 1;} forEach crew _supplyHeli;
-	
-	//damage the helicopter - will be destroyed on impact
-	_supplyHeli setDamage 0.9;
-	
-	//Announce the heli got destroyed - optional, comment out below if you don't want to notify players
-	_title = "Supply Helicopter Crashed!";
-	_subTitle = "Looks like you'll have to wait a while for those supplies.";
-	[_title,_subTitle] call SDROPBroadcast;
+	while {true} do {
+		if (_supplyHeli distance (getWPPos _wpPosition) < 800) then {
+			_crashDestinationDone = true;
+			
+			//kill the crew - will result in crash
+			{_x setDamage 1;} forEach units _grpPilot;
+			
+			//damage the helicopter - will be destroyed on impact
+			_supplyHeli setDamage 0.9;
+			
+			//Announce the heli got destroyed - optional, comment out below if you don't want to notify players
+			_title = "Supply Helicopter Crashed!";
+			_subTitle = "Looks like you'll have to wait a while for those supplies.";
+			[_title,_subTitle] call SDROPBroadcast;
+			
+			if (SDROP_CreateParatrooperAI) then {
+				if (!isNull _grp && count units _grp >= 1) then {
+					{_x setDamage 1;} forEach units _grp;
+					_grp = objNull;
+				};
+			};
+		};
+		if (_crashDestinationDone) exitWith {};
+		uiSleep 5;
+	};
 	
 	//let's recall mission
 	uiSleep SDROP_MissionTimer;
@@ -92,7 +184,14 @@ if (_heliWillCrash) exitWith {
 };
 
 //Waits until heli gets near the position to drop crate, or if waypoint timeout has been triggered
-waitUntil {_supplyHeli distance _wpPosition < 400 || (diag_tickTime - _supplyDropStartTime) > 300};
+_destinationDone = false;
+while {true} do {
+	if (_supplyHeli distance (getWPPos _wpPosition) < 400 || (diag_tickTime - _supplyDropStartTime) > 300) then {
+		_destinationDone = true;
+	};
+	if (_destinationDone) exitWith {};
+	uiSleep 10;
+};
 
 //create the parachute and crate
 _crate = createVehicle ["IG_supplyCrate_F", [0,0,0], [], 0, "CAN_COLLIDE"];
@@ -102,7 +201,7 @@ _crate setPos [position _supplyHeli select 0, position _supplyHeli select 1, (po
 _chute = createVehicle ["I_Parachute_02_F", position _crate, [], 0, "CAN_COLLIDE"];
 _chute call EPOCH_server_vehicleInit;
 _chute call EPOCH_server_setVToken;
-_crate attachTo [_chute, [0, 0, -1.3]];
+_crate attachTo [_chute, [0, 0, -0.5]];
 
 //FILL crate with LOOT
 _crateTypeArr = ["food","supplies","weapons","random"];
@@ -128,13 +227,57 @@ switch (_crateType) do {
 	};
 };
 
-//return helicopter to spawn and clean it up
-_supplyHeli move _heliSpawnPosition;
-[_supplyHeli,_heliSpawnPosition] execVM "\SDROP\scripts\SDROP_AI_CleanUp.sqf";
+// Eject AI from helicopter
+if (SDROP_CreateParatrooperAI) then {
+	{ 
+		unassignVehicle (_x); 
+		(_x) action ["EJECT", _supplyHeli]; 
+		uiSleep 1.5; 
+	} forEach units _grp;
+};
+
+//small pause to ensure all items extract
+uiSleep 3;
+
+//return helicopter to spawn area and clean it up
+//sometimes this doesn't happen, so we check heli loitering later
+_wpHome =_grpPilot addWaypoint [_heliSpawnPosition, 1];
+_wpHome setWaypointType "MOVE";
+_wpHome setWaypointSpeed "FULL";
+_wpHome setWaypointBehaviour "COMBAT";
+_wpHome setWaypointCompletionRadius 800;
+_wpHome setWaypointStatements ["true", "deleteVehicle (vehicle this); {deleteVehicle _x} forEach units group this;"];
 
 //detach chute when crate is near the ground
-waitUntil {getPosATL _crate select 2 < 1 || isNull _chute};
-detach _crate;
+_crateOnGround = false;
+while {true} do {
+	if (getPosATL _crate select 2 > 30) then {
+		//attempt to smooth drop for paratroops
+		if (SDROP_CreateParatrooperAI) then {
+			{
+				_vel = velocity _x;
+				_dirTo = [_x,_crate] call bis_fnc_dirTo;
+				//if (_crate distance _x > 20) then {
+				//	_x setDir _dirTo;
+				//};
+				_x setDir _dirTo;
+				_x setVelocity [
+					(_vel select 0) + (sin _dirTo * 0.2),
+					(_vel select 1) + (cos _dirTo * 0.2),
+					(_vel select 2)
+				];
+			} forEach units _grp;
+		};
+		//uiSleep 1;
+	};
+
+	if (getPosATL _crate select 2 < 4) then {
+		_crateOnGround = true;
+		detach _crate;
+	};
+	if (_crateOnGround) exitWith {};
+	uiSleep 1;
+};
 
 //delete the chute for clean-up purposes
 deleteVehicle _chute;
@@ -147,12 +290,24 @@ if (_crateIsInWater) exitWith {
 	//crate was dropped in water, re-start mission, do some cleanup
 	deleteVehicle _crate;
 	
+	//remove all AI or they just swim until death
+	if (SDROP_CreateParatrooperAI) then {
+		if (!isNull _grp && count units _grp >= 1) then {
+			{deleteVehicle _x;} forEach units _grp;
+			_grp = objNull;
+		};
+	};
+	
 	if (SDROP_Debug) then {
 		diag_log text format ["[SDROP]: Crate dropped in water - restarting."];
 	};
 	
 	uiSleep SDROP_MissionTimer;
 	[] execVM "\SDROP\missions\SDROP_SupplyDrop.sqf";
+};
+
+if (SDROP_CreateParatrooperAI) then {
+	[_grp, _crate] call SDROPSetAIWaypoints;
 };
 
 //we don't want to give away crates exact position, so we'll generate an offset in meters (default 200)
@@ -187,8 +342,35 @@ _title = "Supply Crate Delivered!";
 _subTitle = "Check your map for the drop zone, and go get those supplies!";
 [_title,_subTitle] call SDROPBroadcast;
 
-//Waits until player gets near the _crate to end mission OR timeout occurred
-waitUntil{(diag_tickTime - _crateDropStartTime) > SDROP_CrateTimeout || {isPlayer _x && _x distance _crate < 10} count playableUnits > 0};
+//check to see if helicopter is loitering (it should be long gone by now)
+//hate to do this, but have to just delete the vehicle as it refuses to comply with waypoint
+_heliLoitering = true;
+while {_heliLoitering} do {
+	if (_supplyHeli distance (getWPPos _wpPosition) < 400 && !isNull _supplyHeli) then {
+		diag_log text format ["[SDROP]: Deleted supply helicopter for loitering"];
+		deleteWaypoint [_grpPilot, 0];
+		deleteWaypoint [_grpPilot, 1];
+		{deleteVehicle _x;} forEach units _grpPilot;
+		deleteVehicle _supplyHeli;
+	} else {
+		_heliLoitering = false;
+	};
+	uiSleep 5;
+};
+
+//Waits until player gets near the crate to end mission OR timeout occurred
+_crateFound = false;
+_crateTimedOut = false;
+while {true} do {
+	if ((diag_tickTime - _crateDropStartTime) > SDROP_CrateTimeout) then {
+		_crateTimedOut = true;
+	};
+	if ({isPlayer _x && _x distance _crate < 10} count playableUnits > 0) then {
+		_crateFound = true;
+	};
+	if (_crateFound || _crateTimedOut) exitWith {};
+	uiSleep 15;
+};
 
 //delete marker, smoke and chemLight
 deleteMarker "SupplyDropMarker";
@@ -196,9 +378,17 @@ deleteVehicle _smoke;
 deleteVehicle _chemLight;
 
 //clean-up the crate after time-out has been reached, and no player found the crate
-if ((diag_tickTime - _crateDropStartTime) > SDROP_CrateTimeout) exitWith {
-	
+if (_crateTimedOut) exitWith {
+
 	deleteVehicle _crate;
+	
+	//remove all AI
+	if (SDROP_CreateParatrooperAI) then {
+			if (!isNull _grp && count units _grp >= 1) then {
+			{deleteVehicle _x;} forEach units _grp;
+			_grp = objNull;
+		};
+	};
 	
 	if (SDROP_Debug) then {
 		diag_log text format ["[SDROP]: No players found the crate. Deleted crate"];
@@ -211,6 +401,6 @@ if ((diag_tickTime - _crateDropStartTime) > SDROP_CrateTimeout) exitWith {
 };
 
 //player got within 10m of crate, so lets clean it up after a short delay
-if (!isNull _crate) then {
-	[_crate] execVM "\SDROP\scripts\SDROP_Crate_CleanUp.sqf";
+if (!isNull _crate && _crateFound) then {
+	[_crate,_grp] execVM "\SDROP\scripts\SDROP_Crate_CleanUp.sqf";
 }
