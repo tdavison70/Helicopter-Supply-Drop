@@ -33,6 +33,7 @@
 	<li>Crate can be destroyed by certain terrain (rocks)</li>
 	<li>AI units sometimes die on drops when they hit the ground (most often by rocks)</li>
 	<li>AI are extremely tough to beat solo (can be edited in SDROP_Functions.sqf)</li>
+	<li>You might need to add !="srifle_LRR_SOS_F" to your addWeaponCargo.txt</li>
 </ul>
 
 <strong>v1.0b Hotfix</strong>
