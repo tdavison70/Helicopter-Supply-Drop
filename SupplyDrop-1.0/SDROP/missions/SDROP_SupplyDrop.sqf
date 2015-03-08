@@ -268,7 +268,7 @@ while {true} do {
 				];
 			} forEach units _grp;
 		};
-		//uiSleep 1;
+		uiSleep 5;
 	};
 
 	if (getPosATL _crate select 2 < 4) then {
