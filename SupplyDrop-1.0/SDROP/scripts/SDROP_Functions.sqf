@@ -145,13 +145,11 @@ SDROPRandomLoot = {
 	clearItemCargoGlobal _crate;
 	
 	SDROPLootList = [];
-		// Generate Loot
-		{
-			_tmp = (getArray(_x >> 'items'));
-			for "_z" from 0 to ((count(_tmp))-1) do {
-				SDROPLootList = SDROPLootList + [((_tmp select _z) select 0)];
-			};
-		} forEach ("configName _x != 'Uniforms' && configName _x != 'Headgear'" configClasses (configFile >> "CfgLootTable"));
+	// Generate Loot
+	{
+	 _tmp = (getArray(_x >> 'items'));
+	 {SDROPLootList = SDROPLootList + [ ( _x select 0 ) select 0 ];} forEach (_tmp);
+	} forEach ("configName _x != 'Uniforms' && configName _x != 'Headgear'" configClasses (configFile >> "CfgLootTable"));
 	
 	_report = [];
 	// Load Random Loot Amount
